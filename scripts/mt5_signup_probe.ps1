@@ -54,6 +54,37 @@ foreach($e in $all2) {
   }
 }
 Write-Output ("SAFE_MENU_LABELS_FOUND="+$found)
+$acctItem=$null
+foreach($e in $all2) {
+  if([string]$e.Current.Name -eq "Open an Account") { $acctItem=$e;break }
+}
+if($null -ne $acctItem) {
+  try {
+    $invoke=$acctItem.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+    $invoke.Invoke()
+    Write-Output "DEMO_WIZARD_MENU_INVOKED=True"
+    Start-Sleep -Seconds 3
+    $list=$desk.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition)
+    foreach($dialog in $list) {
+      $text=[string]$dialog.Current.Name
+      if($text -match "(?i)open an account|meta.?trader|broker|account") {
+        Write-Output ("WIZARD_PRESENT=True")
+        $nodes=$dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
+        $allowed=@("MetaQuotes-Demo","Select a Server","Find your broker","Existing trade account",
+                   "Open a demo account","Open a Demo Account","Open an account","First name","Last name",
+                   "Name","Surname","Email","E-mail","Mobile","Phone","Next","Finish","Back","Cancel")
+        $counts=@{}
+        foreach($node in $nodes) {
+           $name=[string]$node.Current.Name
+           if($name -in $allowed) {
+             $counts[$name]=1
+           }
+        }
+        Write-Output ("WIZARD_SAFE_LABELS=" + (($counts.Keys | Sort-Object) -join ";"))
+      }
+    }
+  } catch {Write-Output ("DEMO_WIZARD_MENU_INVOKED=False ERROR_TYPE="+$_.Exception.GetType().Name)}
+}
 [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
 if(-not $tp.HasExited){Stop-Process -Id $tp.Id -Force -ErrorAction SilentlyContinue}
 Write-Output "NO_DEMO_REGISTRATION_SUBMITTED; NO_TICKS_OR_TRADES"
