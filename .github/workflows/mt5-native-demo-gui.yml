@@ -12,3 +12,10 @@ jobs:
       - name: Check native demo wizard without submitting registration
         shell: pwsh
         run: ./scripts/mt5_signup_probe.ps1
+      - name: Publish blank demo wizard screenshot (no account details)
+        uses: actions/upload-artifact@v4
+        with:
+          name: blank-mt5-wizard
+          path: blank_mt5_wizard.png
+          if-no-files-found: ignore
+          retention-days: 1

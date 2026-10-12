@@ -106,6 +106,17 @@ if($null -ne $acctItem) {
       }
     }
     Write-Output ("WIZARD_SAFE_LABELS="+(($safeNames | Sort-Object)-join ";"))
+    # Blank ephemeral hosted Windows VM; no user/account data is entered.
+    Add-Type -AssemblyName System.Drawing
+    $bounds=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $bmp=New-Object System.Drawing.Bitmap($bounds.Width,$bounds.Height)
+    $graphics=[System.Drawing.Graphics]::FromImage($bmp)
+    try {
+      $graphics.CopyFromScreen($bounds.Location,[System.Drawing.Point]::Empty,$bounds.Size)
+      $target=Join-Path $env:GITHUB_WORKSPACE "blank_mt5_wizard.png"
+      $bmp.Save($target,[System.Drawing.Imaging.ImageFormat]::Png)
+      Write-Output "BLANK_GUI_DIAGNOSTIC_SCREENSHOT_SAVED=True"
+    } finally {$graphics.Dispose();$bmp.Dispose()}
   } catch {
     Write-Output ("WIZARD_INSPECTION_ERROR_TYPE="+$_.Exception.GetType().Name)
   }
