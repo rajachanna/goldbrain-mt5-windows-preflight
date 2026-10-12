@@ -30,5 +30,30 @@ foreach($w in $all) {
   }
 }
 Write-Output ("RELEVANT_GUI_WINDOWS="+$cnt)
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class GBFocus {
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
+[GBFocus]::SetForegroundWindow($tp.MainWindowHandle) | Out-Null
+Start-Sleep -Seconds 1
+[System.Windows.Forms.SendKeys]::SendWait("%f")
+Start-Sleep -Seconds 2
+$menuLabels=@("File","New Chart","Open an Account","Open Account","Login to Trade Account","Trade Accounts","Close","Exit")
+$all2=$desk.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
+$found=0
+foreach($e in $all2) {
+  if($found -ge 15){break}
+  $txt=[string]$e.Current.Name
+  if($txt -in $menuLabels) {
+    $found++
+    Write-Output ("SAFE_MENU_LABEL="+$txt)
+  }
+}
+Write-Output ("SAFE_MENU_LABELS_FOUND="+$found)
+[System.Windows.Forms.SendKeys]::SendWait("{ESC}")
 if(-not $tp.HasExited){Stop-Process -Id $tp.Id -Force -ErrorAction SilentlyContinue}
 Write-Output "NO_DEMO_REGISTRATION_SUBMITTED; NO_TICKS_OR_TRADES"
