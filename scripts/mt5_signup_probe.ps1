@@ -88,10 +88,21 @@ if($null -ne $acctItem) {
         Write-Output "POSSIBLE_MT5_DIALOG_PRESENT=True"
         $nodes=$dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants,
                                [System.Windows.Automation.Condition]::TrueCondition)
+        $kindCounts=@{}
+        $sampleNames=[System.Collections.Generic.HashSet[string]]::new()
         foreach($node in $nodes) {
           $n=[string]$node.Current.Name
+          $t=[string]$node.Current.ControlType.ProgrammaticName
+          if(-not $kindCounts.ContainsKey($t)){$kindCounts[$t]=0}
+          $kindCounts[$t]++
           if($n -in $labels) { $safeNames.Add($n)|Out-Null }
+          # Only static UI strings; suppress text with @, digits or colon (may be identifiers).
+          if($n.Length -gt 1 -and $n.Length -lt 55 -and
+             $n -match '^[a-zA-Z ]+$' -and
+             $sampleNames.Count -lt 30) {$sampleNames.Add($n)|Out-Null}
         }
+        Write-Output ("WIZARD_CONTROL_TYPES="+(($kindCounts.Keys | Sort-Object | ForEach-Object {$_+"="+$kindCounts[$_]})-join ";"))
+        Write-Output ("WIZARD_STATIC_LABELS="+(($sampleNames | Sort-Object)-join ";"))
       }
     }
     Write-Output ("WIZARD_SAFE_LABELS="+(($safeNames | Sort-Object)-join ";"))
