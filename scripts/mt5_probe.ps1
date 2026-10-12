@@ -49,7 +49,7 @@ ShutdownTerminal=1
 '@ | Set-Content -Path $cfg -Encoding ASCII
 Write-Output "Launching read-only MetaQuotes-Demo tick probe."
 $tp = Start-Process -FilePath $terminal -ArgumentList @("/portable", "/config:$cfg") -PassThru
-Start-Sleep -Seconds 55
+Start-Sleep -Seconds 88
 Write-Output ("MT5_TERMINAL_EXITED=" + $tp.HasExited)
 if (-not $tp.HasExited) { Stop-Process -Id $tp.Id -Force -ErrorAction SilentlyContinue }
 $paths = @(

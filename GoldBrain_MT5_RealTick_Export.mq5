@@ -12,6 +12,14 @@ input int InpMaxChunkTicks = 300000;
 void OnStart()
   {
    Print("GOLDBRAIN_SCRIPT_STARTED connected=",TerminalInfoInteger(TERMINAL_CONNECTED));
+   for(int wait_s=0;wait_s<42 && !TerminalInfoInteger(TERMINAL_CONNECTED);wait_s++) Sleep(1000);
+   Print("GOLDBRAIN_AFTER_WAIT connected=",TerminalInfoInteger(TERMINAL_CONNECTED),
+         " has_login=",AccountInfoInteger(ACCOUNT_LOGIN)>0,
+         " demo_mode=",AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO);
+   if(!TerminalInfoInteger(TERMINAL_CONNECTED))
+     {
+      Print("GOLDBRAIN_BLOCKED_ACCOUNT_NOT_CONNECTED");return;
+     }
    if(InpToUTC<=InpFromUTC || InpChunkMinutes<1 || InpChunkMinutes>60)
      {
       Print("INVALID_DATE_RANGE_OR_CHUNK"); return;
