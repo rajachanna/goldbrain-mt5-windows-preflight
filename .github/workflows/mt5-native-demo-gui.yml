@@ -1,0 +1,14 @@
+name: MetaQuotes native demo GUI eligibility check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ui_probe:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check native demo wizard without submitting registration
+        shell: pwsh
+        run: ./scripts/mt5_signup_probe.ps1
