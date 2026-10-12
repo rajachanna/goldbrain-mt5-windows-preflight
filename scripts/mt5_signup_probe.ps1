@@ -36,6 +36,9 @@ using System;
 using System.Runtime.InteropServices;
 public class GBFocus {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+  [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+  public static void Click(int x,int y) { SetCursorPos(x,y); System.Threading.Thread.Sleep(120); mouse_event(0x0002,0,0,0,UIntPtr.Zero); mouse_event(0x0004,0,0,0,UIntPtr.Zero); }
 }
 "@
 [GBFocus]::SetForegroundWindow($tp.MainWindowHandle) | Out-Null
@@ -60,30 +63,41 @@ foreach($e in $all2) {
 }
 if($null -ne $acctItem) {
   try {
-    $invoke=$acctItem.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
-    $invoke.Invoke()
-    Write-Output "DEMO_WIZARD_MENU_INVOKED=True"
-    Start-Sleep -Seconds 3
-    $list=$desk.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition)
-    foreach($dialog in $list) {
-      $text=[string]$dialog.Current.Name
-      if($text -match "(?i)open an account|meta.?trader|broker|account") {
-        Write-Output ("WIZARD_PRESENT=True")
-        $nodes=$dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)
-        $allowed=@("MetaQuotes-Demo","Select a Server","Find your broker","Existing trade account",
-                   "Open a demo account","Open a Demo Account","Open an account","First name","Last name",
-                   "Name","Surname","Email","E-mail","Mobile","Phone","Next","Finish","Back","Cancel")
-        $counts=@{}
+    $r=$acctItem.Current.BoundingRectangle
+    Write-Output ("OPEN_ACCOUNT_MENU_BOUNDS_VALID="+($r.Width -gt 5 -and $r.Height -gt 5))
+    if($r.Width -gt 5 -and $r.Height -gt 5) {
+      [GBFocus]::Click([int]($r.Left+$r.Width/2),[int]($r.Top+$r.Height/2))
+      Write-Output "OPEN_ACCOUNT_MENU_PHYSICALLY_CLICKED=True"
+    } else {
+      [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
+      [GBFocus]::SetForegroundWindow($tp.MainWindowHandle) | Out-Null
+      [System.Windows.Forms.SendKeys]::SendWait("%f")
+      [System.Windows.Forms.SendKeys]::SendWait("a")
+      Write-Output "OPEN_ACCOUNT_MENU_KEYBOARD_ACCELERATOR_ATTEMPTED=True"
+    }
+    Start-Sleep -Seconds 4
+    $windows=$desk.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition)
+    $labels=@("MetaQuotes-Demo","Select a Server","Find your broker","Existing trade account",
+              "Open a demo account","Open a Demo Account","Open an account","First name","Last name",
+              "Name","Surname","Email","E-mail","Mobile","Phone","Next","Finish","Back","Cancel",
+              "Search","Company","Start","Demo account")
+    $safeNames=[System.Collections.Generic.HashSet[string]]::new()
+    foreach($dialog in $windows) {
+      $windowName=[string]$dialog.Current.Name
+      if($windowName -match "(?i)open an account|meta.?trader|broker|account|server") {
+        Write-Output "POSSIBLE_MT5_DIALOG_PRESENT=True"
+        $nodes=$dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+                               [System.Windows.Automation.Condition]::TrueCondition)
         foreach($node in $nodes) {
-           $name=[string]$node.Current.Name
-           if($name -in $allowed) {
-             $counts[$name]=1
-           }
+          $n=[string]$node.Current.Name
+          if($n -in $labels) { $safeNames.Add($n)|Out-Null }
         }
-        Write-Output ("WIZARD_SAFE_LABELS=" + (($counts.Keys | Sort-Object) -join ";"))
       }
     }
-  } catch {Write-Output ("DEMO_WIZARD_MENU_INVOKED=False ERROR_TYPE="+$_.Exception.GetType().Name)}
+    Write-Output ("WIZARD_SAFE_LABELS="+(($safeNames | Sort-Object)-join ";"))
+  } catch {
+    Write-Output ("WIZARD_INSPECTION_ERROR_TYPE="+$_.Exception.GetType().Name)
+  }
 }
 [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
 if(-not $tp.HasExited){Stop-Process -Id $tp.Id -Force -ErrorAction SilentlyContinue}
