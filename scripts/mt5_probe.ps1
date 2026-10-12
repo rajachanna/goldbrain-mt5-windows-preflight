@@ -1,4 +1,14 @@
 $ErrorActionPreference = "Stop"
+# Fail closed: no public logs, repository files or workflow inputs may contain credentials.
+if ([string]::IsNullOrWhiteSpace($env:MT5_DEMO_LOGIN) -or
+    [string]::IsNullOrWhiteSpace($env:MT5_DEMO_INVESTOR_PASSWORD)) {
+  Write-Output "DEMO_INVESTOR_LOGIN_SECRETS_NOT_CONFIGURED; no MT5 terminal launched."
+  exit 0
+}
+if ($env:MT5_DEMO_LOGIN -notmatch "^[0-9]{5,15}$" -or
+    $env:MT5_DEMO_INVESTOR_PASSWORD -match "[`r`n]") {
+  throw "INVALID_DEMO_SECRET_FORMAT"
+}
 $base = Join-Path $env:RUNNER_TEMP "gb_mt5"
 New-Item -ItemType Directory -Force -Path $base | Out-Null
 $url = "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe"
@@ -34,9 +44,12 @@ $ex5 = [System.IO.Path]::ChangeExtension($dest, ".ex5")
 if (-not (Test-Path $ex5)) { throw "MQL5_EX5_COMPILATION_FAILED" }
 Write-Output "EX5_COMPILED_OK"
 $cfg = Join-Path $base "GB-startup.ini"
-@'
+$configTemplate = @'
 [Common]
+Login=REPLACE_BY_SAFE_VARIABLE
 Server=MetaQuotes-Demo
+Password=REPLACE_BY_SAFE_PASSWORD
+KeepPrivate=0
 [Experts]
 AllowLiveTrading=0
 AllowDllImport=0
@@ -46,12 +59,17 @@ Symbol=XAUUSD
 Period=M1
 Script=GoldBrain_MT5_RealTick_Export
 ShutdownTerminal=1
-'@ | Set-Content -Path $cfg -Encoding ASCII
+'@
+$configText = $configTemplate.Replace('REPLACE_BY_SAFE_VARIABLE', $env:MT5_DEMO_LOGIN).Replace('REPLACE_BY_SAFE_PASSWORD', $env:MT5_DEMO_INVESTOR_PASSWORD)
+$configText | Set-Content -Path $cfg -Encoding ASCII
+Remove-Variable configText,configTemplate -ErrorAction SilentlyContinue
 Write-Output "Launching read-only MetaQuotes-Demo tick probe."
 $tp = Start-Process -FilePath $terminal -ArgumentList @("/portable", "/config:$cfg") -PassThru
 Start-Sleep -Seconds 88
 Write-Output ("MT5_TERMINAL_EXITED=" + $tp.HasExited)
 if (-not $tp.HasExited) { Stop-Process -Id $tp.Id -Force -ErrorAction SilentlyContinue }
+# Never persist account credentials as part of a workflow output/artifact.
+if (Test-Path $cfg) { Remove-Item $cfg -Force -ErrorAction SilentlyContinue }
 $paths = @(
  (Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files"),
  (Join-Path $root "MQL5\Files")

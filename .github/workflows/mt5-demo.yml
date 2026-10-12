@@ -1,7 +1,5 @@
 name: MetaQuotes Gold read-only tick preflight
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,4 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install and test MetaQuotes-Demo Gold ticks (no trading)
         shell: pwsh
+        env:
+          MT5_DEMO_LOGIN: ${{ secrets.MT5_DEMO_LOGIN }}
+          MT5_DEMO_INVESTOR_PASSWORD: ${{ secrets.MT5_DEMO_INVESTOR_PASSWORD }}
         run: ./scripts/mt5_probe.ps1
