@@ -76,6 +76,15 @@ if($null -ne $acctItem) {
       Write-Output "OPEN_ACCOUNT_MENU_KEYBOARD_ACCELERATOR_ATTEMPTED=True"
     }
     Start-Sleep -Seconds 4
+    $screen=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    if($screen.Width -eq 1024 -and $screen.Height -eq 768) {
+      # Stable coordinates from screenshot of a fresh, empty MetaQuotes wizard.
+      [GBFocus]::Click(299,241)
+      Start-Sleep -Seconds 1
+      [GBFocus]::Click(728,607)
+      Write-Output "METAQUOTES_COMPANY_AND_NEXT_STEP_ATTEMPTED=True"
+      Start-Sleep -Seconds 5
+    } else {Write-Output "GUI_SCREEN_SIZE_UNEXPECTED_SKIPPING_CLICK"}
     $windows=$desk.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition)
     $labels=@("MetaQuotes-Demo","Select a Server","Find your broker","Existing trade account",
               "Open a demo account","Open a Demo Account","Open an account","First name","Last name",
