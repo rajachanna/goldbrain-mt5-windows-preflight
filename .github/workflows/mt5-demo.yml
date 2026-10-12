@@ -1,0 +1,16 @@
+name: MetaQuotes Gold read-only tick preflight
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows_mt5:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and test MetaQuotes-Demo Gold ticks (no trading)
+        shell: pwsh
+        run: ./scripts/mt5_probe.ps1
