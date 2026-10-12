@@ -49,7 +49,8 @@ ShutdownTerminal=1
 '@ | Set-Content -Path $cfg -Encoding ASCII
 Write-Output "Launching read-only MetaQuotes-Demo tick probe."
 $tp = Start-Process -FilePath $terminal -ArgumentList @("/portable", "/config:$cfg") -PassThru
-Start-Sleep -Seconds 85
+Start-Sleep -Seconds 55
+Write-Output ("MT5_TERMINAL_EXITED=" + $tp.HasExited)
 if (-not $tp.HasExited) { Stop-Process -Id $tp.Id -Force -ErrorAction SilentlyContinue }
 $paths = @(
  (Join-Path $env:APPDATA "MetaQuotes\Terminal\Common\Files"),
@@ -70,4 +71,24 @@ foreach ($c in $csvs) {
 }
 Write-Output "REAL_TICK_ROWS_TOTAL=$total"
 if ($total -eq 0) { Write-Output "NO_METAQUOTES_REAL_TICKS_RETURNED_OR_DEMO_NOT_CONNECTED" }
+$journalRoots = @($root, (Join-Path $env:APPDATA "MetaQuotes\Terminal"))
+$jlogs = @()
+foreach ($r in $journalRoots) {
+  if (Test-Path $r) {
+    $jlogs += @(Get-ChildItem -Path $r -Recurse -Filter "*.log" -File -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending | Select-Object -First 8)
+  }
+}
+Write-Output ("MT5_JOURNAL_FILES_FOUND=" + $jlogs.Count)
+$markerLines = @()
+foreach ($j in $jlogs) {
+  try {
+    $txt = Get-Content -Path $j.FullName -Encoding Unicode -Tail 140 -ErrorAction Stop
+    $markerLines += @($txt | Where-Object { $_ -match "GOLDBRAIN_|RAW_TICKS|TICK_SYNC_ERROR|SYMBOL_UNAVAILABLE" })
+  } catch { }
+}
+Write-Output ("MT5_SCRIPT_MARKER_COUNT=" + $markerLines.Count)
+foreach ($line in ($markerLines | Select-Object -Last 12)) {
+  Write-Output ("SAFE_SCRIPT_MARKER=" + ($line -replace "[^a-zA-Z0-9_ .:=\-]", "").Substring(0,[Math]::Min(160,($line -replace "[^a-zA-Z0-9_ .:=\-]", "").Length)))
+}
 Write-Output "NO_TRADES_EXECUTED; NO_RAW_CSV_ARTIFACT_PUBLISHED"

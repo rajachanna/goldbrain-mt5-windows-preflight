@@ -11,6 +11,7 @@ input int InpChunkMinutes = 5;
 input int InpMaxChunkTicks = 300000;
 void OnStart()
   {
+   Print("GOLDBRAIN_SCRIPT_STARTED connected=",TerminalInfoInteger(TERMINAL_CONNECTED));
    if(InpToUTC<=InpFromUTC || InpChunkMinutes<1 || InpChunkMinutes>60)
      {
       Print("INVALID_DATE_RANGE_OR_CHUNK"); return;
